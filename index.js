@@ -322,7 +322,7 @@ function connect() {
               type: "section",
               text: {
                 type: "mrkdwn",
-                text: `New issue created by ${eventAttributes["Creator"]}\n<https://gitopia.com/${eventAttributes["RepositoryOwnerId"]}/issues/${eventAttributes["IssueIid"]}|#${eventAttributes["IssueIid"]} ${eventAttributes["IssueTitle"]}>`,
+                text: `New issue created by <https://gitopia.com/${eventAttributes["Creator"]}|${eventAttributes["Creator"]}>\n<https://gitopia.com/${eventAttributes["RepositoryOwnerId"]}/${eventAttributes["RepositoryName"]}/issues/${eventAttributes["IssueIid"]}|#${eventAttributes["IssueIid"]} ${eventAttributes["IssueTitle"]}>`,
               },
             });
             break;
