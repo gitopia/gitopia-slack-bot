@@ -312,7 +312,7 @@ function connect() {
               type: "section",
               text: {
                 type: "mrkdwn",
-                text: `New repository created by ${eventAttributes["Creator"]}\n<https://gitopia.com/${eventAttributes["RepositoryOwnerId"]}|${eventAttributes["RepositoryName"]}>`,
+                text: `New repository created by <https://gitopia.com/${eventAttributes["Creator"]}|${eventAttributes["Creator"]}>\n<https://gitopia.com/${eventAttributes["RepositoryOwnerId"]}/${eventAttributes["RepositoryName"]}|${eventAttributes["RepositoryName"]}>`,
               },
             });
             break;
