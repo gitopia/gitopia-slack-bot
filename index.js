@@ -327,6 +327,30 @@ function connect() {
             });
             break;
           }
+          case "/gitopia.gitopia.gitopia.MsgCreatePullRequest": {
+            blocks.push({
+              type: "section",
+              text: {
+                type: "mrkdwn",
+                text: `New pull request created by <https://gitopia.com/${eventAttributes["Creator"]}|${eventAttributes["Creator"]}>\n<https://gitopia.com/${eventAttributes["RepositoryOwnerId"]}/${eventAttributes["RepositoryName"]}/pulls/${eventAttributes["PullRequestIid"]}|#${eventAttributes["PullRequestIid"]} ${eventAttributes["PullRequestTitle"]}>`,
+              },
+            });
+            break;
+          }
+          case "SetPullRequestState": {
+            // TODO
+            break;
+          }
+          case "/gitopia.gitopia.gitopia.MsgCreateComment": {
+            blocks.push({
+              type: "section",
+              text: {
+                type: "mrkdwn",
+                text: `New comment created by <https://gitopia.com/${eventAttributes["Creator"]}|${eventAttributes["Creator"]}>`,
+              },
+            });
+            break;
+          }
           default:
             console.log(`Unsupported action ${eventAttributes["action"]}`);
             break;
