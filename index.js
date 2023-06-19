@@ -424,6 +424,13 @@ function connect() {
               const repositoryOwnerId = response.data.Repository.owner.id;
               const repositoryOwnerType = response.data.Repository.owner.type;
 
+              if (
+                repositoryOwnerId ===
+                "gitopia1tkvqw2mwjsjptlm08jdp04mw2834qzd7v5x9nm5us8dp04hsp4rq3c8dm9"
+              ) {
+                channel = "#engineering";
+              }
+
               const username = await getUsername(eventAttributes["Creator"]);
 
               var repoOwnerName = "";
@@ -476,7 +483,6 @@ function connect() {
             break;
         }
 
-        // If the key and value match our criteria, set the flag to true
         if (
           eventAttributes["RepositoryOwnerId"] ===
           "gitopia1tkvqw2mwjsjptlm08jdp04mw2834qzd7v5x9nm5us8dp04hsp4rq3c8dm9"
