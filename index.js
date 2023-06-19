@@ -1,6 +1,9 @@
 require("dotenv").config();
 const { WebClient } = require("@slack/web-api");
 const WebSocket = require("ws");
+const axios = require("axios");
+const { GITOPIA_API_URL } = require("./config");
+const { getUsername, getDAOname } = require("./util");
 
 // Initialize a Slack Web API client
 const web = new WebClient(process.env.SLACK_BOT_TOKEN);
@@ -64,11 +67,13 @@ function connect() {
         // Change the message format and displayed attributes based on the action value
         switch (eventAttributes["action"]) {
           case "MultiSetRepositoryBranch": {
+            const username = await getUsername(eventAttributes["Creator"]);
+
             blocks.push({
               type: "section",
               text: {
                 type: "mrkdwn",
-                text: `Branches updated by <https://gitopia.com/${eventAttributes["Creator"]}|${eventAttributes["Creator"]}>`,
+                text: `Branches updated by <https://gitopia.com/${username}|${username}>`,
               },
             });
 
@@ -94,11 +99,22 @@ function connect() {
               ],
             };
 
+            var repoOwnerName = "";
+            if (eventAttributes["RepositoryOwnerType"] === "USER") {
+              repoOwnerName = await getUsername(
+                eventAttributes["RepositoryOwnerId"]
+              );
+            } else {
+              repoOwnerName = await getDAOname(
+                eventAttributes["RepositoryOwnerId"]
+              );
+            }
+
             for (let branch of branches) {
               branchSection.fields.push(
                 {
                   type: "mrkdwn",
-                  text: `<https://gitopia.com/${eventAttributes["RepositoryOwnerId"]}/${eventAttributes["RepositoryName"]}/tree/${branch.name}|${branch.name}>`,
+                  text: `<https://gitopia.com/${repoOwnerName}/${eventAttributes["RepositoryName"]}/tree/${branch.name}|${branch.name}>`,
                 },
                 {
                   type: "mrkdwn",
@@ -113,18 +129,20 @@ function connect() {
               type: "section",
               text: {
                 type: "mrkdwn",
-                text: `<https://gitopia.com/${eventAttributes["RepositoryOwnerId"]}/${eventAttributes["RepositoryName"]}|${eventAttributes["RepositoryOwnerId"]}/${eventAttributes["RepositoryName"]}>`,
+                text: `<https://gitopia.com/${repoOwnerName}/${eventAttributes["RepositoryName"]}|${repoOwnerName}/${eventAttributes["RepositoryName"]}>`,
               },
             });
 
             break;
           }
           case "MultiDeleteRepositoryBranch": {
+            const username = await getUsername(eventAttributes["Creator"]);
+
             blocks.push({
               type: "section",
               text: {
                 type: "mrkdwn",
-                text: `Branches deleted by <https://gitopia.com/${eventAttributes["Creator"]}|${eventAttributes["Creator"]}>`,
+                text: `Branches deleted by <https://gitopia.com/${username}|${username}>`,
               },
             });
 
@@ -165,22 +183,35 @@ function connect() {
 
             blocks.push(branchSection);
 
+            var repoOwnerName = "";
+            if (eventAttributes["RepositoryOwnerType"] === "USER") {
+              repoOwnerName = await getUsername(
+                eventAttributes["RepositoryOwnerId"]
+              );
+            } else {
+              repoOwnerName = await getDAOname(
+                eventAttributes["RepositoryOwnerId"]
+              );
+            }
+
             blocks.push({
               type: "section",
               text: {
                 type: "mrkdwn",
-                text: `<https://gitopia.com/${eventAttributes["RepositoryOwnerId"]}/${eventAttributes["RepositoryName"]}|${eventAttributes["RepositoryOwnerId"]}/${eventAttributes["RepositoryName"]}>`,
+                text: `<https://gitopia.com/${repoOwnerName}/${eventAttributes["RepositoryName"]}|${repoOwnerName}/${eventAttributes["RepositoryName"]}>`,
               },
             });
 
             break;
           }
           case "MultiSetRepositoryTag": {
+            const username = await getUsername(eventAttributes["Creator"]);
+
             blocks.push({
               type: "section",
               text: {
                 type: "mrkdwn",
-                text: `Tags updated by <https://gitopia.com/${eventAttributes["Creator"]}|${eventAttributes["Creator"]}>`,
+                text: `Tags updated by <https://gitopia.com/${username}|${username}>`,
               },
             });
 
@@ -206,11 +237,22 @@ function connect() {
               ],
             };
 
+            var repoOwnerName = "";
+            if (eventAttributes["RepositoryOwnerType"] === "USER") {
+              repoOwnerName = await getUsername(
+                eventAttributes["RepositoryOwnerId"]
+              );
+            } else {
+              repoOwnerName = await getDAOname(
+                eventAttributes["RepositoryOwnerId"]
+              );
+            }
+
             for (let tag of tags) {
               tagSection.fields.push(
                 {
                   type: "mrkdwn",
-                  text: `<https://gitopia.com/${eventAttributes["RepositoryOwnerId"]}/${eventAttributes["RepositoryName"]}/tree/${tag.name}|${tag.name}>`,
+                  text: `<https://gitopia.com/${repoOwnerName}/${eventAttributes["RepositoryName"]}/tree/${tag.name}|${tag.name}>`,
                 },
                 {
                   type: "mrkdwn",
@@ -225,18 +267,20 @@ function connect() {
               type: "section",
               text: {
                 type: "mrkdwn",
-                text: `<https://gitopia.com/${eventAttributes["RepositoryOwnerId"]}/${eventAttributes["RepositoryName"]}|${eventAttributes["RepositoryOwnerId"]}/${eventAttributes["RepositoryName"]}>`,
+                text: `<https://gitopia.com/${repoOwnerName}/${eventAttributes["RepositoryName"]}|${repoOwnerName}/${eventAttributes["RepositoryName"]}>`,
               },
             });
 
             break;
           }
           case "MultiDeleteRepositoryTag": {
+            const username = await getUsername(eventAttributes["Creator"]);
+
             blocks.push({
               type: "section",
               text: {
                 type: "mrkdwn",
-                text: `Tags deleted by <https://gitopia.com/${eventAttributes["Creator"]}|${eventAttributes["Creator"]}>`,
+                text: `Tags deleted by <https://gitopia.com/${username}|${username}>`,
               },
             });
 
@@ -277,11 +321,22 @@ function connect() {
 
             blocks.push(tagSection);
 
+            var repoOwnerName = "";
+            if (eventAttributes["RepositoryOwnerType"] === "USER") {
+              repoOwnerName = await getUsername(
+                eventAttributes["RepositoryOwnerId"]
+              );
+            } else {
+              repoOwnerName = await getDAOname(
+                eventAttributes["RepositoryOwnerId"]
+              );
+            }
+
             blocks.push({
               type: "section",
               text: {
                 type: "mrkdwn",
-                text: `<https://gitopia.com/${eventAttributes["RepositoryOwnerId"]}/${eventAttributes["RepositoryName"]}|${eventAttributes["RepositoryOwnerId"]}/${eventAttributes["RepositoryName"]}>`,
+                text: `<https://gitopia.com/${repoOwnerName}/${eventAttributes["RepositoryName"]}|${repoOwnerName}/${eventAttributes["RepositoryName"]}>`,
               },
             });
 
@@ -308,6 +363,17 @@ function connect() {
             break;
           }
           case "CreateRepository": {
+            var repoOwnerName = "";
+            if (eventAttributes["RepositoryOwnerType"] === "USER") {
+              repoOwnerName = await getUsername(
+                eventAttributes["RepositoryOwnerId"]
+              );
+            } else {
+              repoOwnerName = await getDAOname(
+                eventAttributes["RepositoryOwnerId"]
+              );
+            }
+
             blocks.push({
               type: "section",
               text: {
@@ -318,23 +384,65 @@ function connect() {
             break;
           }
           case "CreateIssue": {
-            blocks.push({
-              type: "section",
-              text: {
-                type: "mrkdwn",
-                text: `New issue created by <https://gitopia.com/${eventAttributes["Creator"]}|${eventAttributes["Creator"]}>\n<https://gitopia.com/${eventAttributes["RepositoryOwnerId"]}/${eventAttributes["RepositoryName"]}/issues/${eventAttributes["IssueIid"]}|#${eventAttributes["IssueIid"]} ${eventAttributes["IssueTitle"]}>`,
-              },
-            });
+            try {
+              const response = await axios.get(
+                `${GITOPIA_API_URL}/repository/${eventAttributes["RepositoryId"]}`
+              );
+              const repositoryName = response.data.Repository.name;
+
+              const username = await getUsername(eventAttributes["Creator"]);
+
+              var repoOwnerName = "";
+              if (eventAttributes["RepositoryOwnerType"] === "USER") {
+                repoOwnerName = await getUsername(
+                  eventAttributes["RepositoryOwnerId"]
+                );
+              } else {
+                repoOwnerName = await getDAOname(
+                  eventAttributes["RepositoryOwnerId"]
+                );
+              }
+
+              blocks.push({
+                type: "section",
+                text: {
+                  type: "mrkdwn",
+                  text: `New issue created by <https://gitopia.com/${username}|${username}>\n<https://gitopia.com/${repoOwnerName}/${repositoryName}/issues/${eventAttributes["IssueIid"]}|#${eventAttributes["IssueIid"]} ${eventAttributes["IssueTitle"]}>`,
+                },
+              });
+            } catch (error) {
+              console.error(`Error getting repository details: ${error}`);
+            }
             break;
           }
-          case "/gitopia.gitopia.gitopia.MsgCreatePullRequest": {
-            blocks.push({
-              type: "section",
-              text: {
-                type: "mrkdwn",
-                text: `New pull request created by <https://gitopia.com/${eventAttributes["Creator"]}|${eventAttributes["Creator"]}>\n<https://gitopia.com/${eventAttributes["RepositoryOwnerId"]}/${eventAttributes["RepositoryName"]}/pulls/${eventAttributes["PullRequestIid"]}|#${eventAttributes["PullRequestIid"]} ${eventAttributes["PullRequestTitle"]}>`,
-              },
-            });
+          case "CreatePullRequest": {
+            try {
+              const response = await axios.get(
+                `${GITOPIA_API_URL}/repository/${eventAttributes["RepositoryId"]}`
+              );
+              const repositoryName = response.data.Repository.name;
+              const repositoryOwnerId = response.data.Repository.owner.id;
+              const repositoryOwnerType = response.data.Repository.owner.type;
+
+              const username = await getUsername(eventAttributes["Creator"]);
+
+              var repoOwnerName = "";
+              if (repositoryOwnerType === "USER") {
+                repoOwnerName = await getUsername(repositoryOwnerId);
+              } else {
+                repoOwnerName = await getDAOname(repositoryOwnerId);
+              }
+
+              blocks.push({
+                type: "section",
+                text: {
+                  type: "mrkdwn",
+                  text: `New PR created by <https://gitopia.com/${username}|${username}>\n<https://gitopia.com/${repoOwnerName}/${repositoryName}/pulls/${eventAttributes["PullRequestIid"]}|#${eventAttributes["PullRequestIid"]} ${eventAttributes["PullRequestTitle"]}>`,
+                },
+              });
+            } catch (error) {
+              console.error(`Error getting repository details: ${error}`);
+            }
             break;
           }
           case "SetPullRequestState": {
@@ -342,13 +450,25 @@ function connect() {
             break;
           }
           case "/gitopia.gitopia.gitopia.MsgCreateComment": {
-            blocks.push({
-              type: "section",
-              text: {
-                type: "mrkdwn",
-                text: `New comment created by <https://gitopia.com/${eventAttributes["Creator"]}|${eventAttributes["Creator"]}>`,
-              },
-            });
+            try {
+              const response = await axios.get(
+                `${GITOPIA_API_URL}/repository/${eventAttributes["RepositoryId"]}`
+              );
+              const repositoryName = response.data.name;
+              blocks.push({
+                type: "section",
+                text: {
+                  type: "mrkdwn",
+                  text: `New comment in  by <https://gitopia.com/${eventAttributes["Creator"]}|${eventAttributes["Creator"]}>`,
+                },
+              });
+            } catch (error) {
+              console.error(`Error getting repository details: ${error}`);
+            }
+            break;
+          }
+          case "ForkRepository": {
+            // TODO
             break;
           }
           default:
