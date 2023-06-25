@@ -364,7 +364,7 @@ function connect() {
           }
           case "CreateIssue": {
             try {
-              const { repoOwnerName, repositoryName } = getRepoDetails(
+              const { repoOwnerName, repositoryName } = await getRepoDetails(
                 eventAttributes["RepositoryId"]
               );
               const username = await getUsername(eventAttributes["Creator"]);
@@ -383,7 +383,7 @@ function connect() {
           }
           case "AddIssueAssignees": {
             try {
-              const { repoOwnerName, repositoryName } = getRepoDetails(
+              const { repoOwnerName, repositoryName } = await getRepoDetails(
                 eventAttributes["RepositoryId"]
               );
               const username = await getUsername(eventAttributes["Creator"]);
@@ -408,7 +408,7 @@ function connect() {
           }
           case "ToggleIssueState": {
             try {
-              const { repoOwnerName, repositoryName } = getRepoDetails(
+              const { repoOwnerName, repositoryName } = await getRepoDetails(
                 eventAttributes["RepositoryId"]
               );
               const username = await getUsername(eventAttributes["Creator"]);
@@ -439,7 +439,7 @@ function connect() {
           }
           case "CreatePullRequest": {
             try {
-              const { repoOwnerName, repositoryName } = getRepoDetails(
+              const { repoOwnerName, repositoryName } = await getRepoDetails(
                 eventAttributes["RepositoryId"]
               );
               const username = await getUsername(eventAttributes["Creator"]);
@@ -462,7 +462,7 @@ function connect() {
           }
           case "SetPullRequestState": {
             try {
-              const { repoOwnerName, repositoryName } = getRepoDetails(
+              const { repoOwnerName, repositoryName } = await getRepoDetails(
                 eventAttributes["RepositoryId"]
               );
               const username = await getUsername(eventAttributes["Creator"]);
@@ -479,7 +479,7 @@ function connect() {
                   );
 
                   const { headRepoOwnerName, headRepositoryName } =
-                    getRepoDetails(headRepo.repositoryId);
+                    await getRepoDetails(headRepo.repositoryId);
                   const baseRepoBranch = JSON.parse(
                     eventAttributes["RepositoryBranch"]
                   );
@@ -508,7 +508,7 @@ function connect() {
           }
           case "LinkPullRequestIssueByIid": {
             try {
-              const { repoOwnerName, repositoryName } = getRepoDetails(
+              const { repoOwnerName, repositoryName } = await getRepoDetails(
                 eventAttributes["RepositoryId"]
               );
               const username = await getUsername(eventAttributes["Creator"]);
@@ -541,7 +541,31 @@ function connect() {
             break;
           }
           case "ForkRepository": {
-            // TODO
+            try {
+              const { repoOwnerName, repositoryName } = await getRepoDetails(
+                eventAttributes["ParentRepositoryId"]
+              );
+              const username = await getUsername(eventAttributes["Creator"]);
+
+              const forkedRepoOwnerName = await resolveAddress(
+                eventAttributes["RepositoryOwnerId"],
+                eventAttributes["RepositoryOwnerType"]
+              );
+
+              if (subscriptions.includes(repoOwnerName)) {
+                channel = "#engineering";
+              }
+
+              blocks.push({
+                type: "section",
+                text: {
+                  type: "mrkdwn",
+                  text: `<https://gitopia.com/${username}|${username}> forked the repository <https://gitopia.com/${repoOwnerName}/${repositoryName}|${repoOwnerName}/${repositoryName}>\n<https://gitopia.com/${forkedRepoOwnerName}/${eventAttributes["RepositoryName"]}|${forkedRepoOwnerName}/${eventAttributes["RepositoryName"]}>`,
+                },
+              });
+            } catch (error) {
+              console.error(`Error getting repository details: ${error}`);
+            }
             break;
           }
           default:
