@@ -27,4 +27,45 @@ async function getDAOname(address) {
   }
 }
 
-module.exports = { getUsername, getDAOname };
+const resolveAddress = async (address, type) => {
+  if (type === "USER") {
+    return await getUsername(address);
+  }
+
+  return await getDAOname(address);
+};
+
+const getRepoDetails = async (repositoryId) => {
+  const response = await axios.get(
+    `${GITOPIA_API_URL}/repository/${repositoryId}`
+  );
+
+  const repositoryOwnerId = response.data.Repository.owner.id;
+  const repositoryOwnerType = response.data.Repository.owner.type;
+  const repositoryName = response.data.Repository.name;
+
+  const repoOwnerName = await resolveAddress(
+    repositoryOwnerId,
+    repositoryOwnerType
+  );
+
+  return { repoOwnerName, repositoryName };
+};
+
+const generateSectionBlock = (message) => {
+  return {
+    type: "section",
+    text: {
+      type: "mrkdwn",
+      text: message,
+    },
+  };
+};
+
+module.exports = {
+  getUsername,
+  getDAOname,
+  resolveAddress,
+  getRepoDetails,
+  generateSectionBlock,
+};

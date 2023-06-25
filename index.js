@@ -2,8 +2,10 @@ require("dotenv").config();
 const { WebClient } = require("@slack/web-api");
 const WebSocket = require("ws");
 const axios = require("axios");
+const express = require("express");
+const bodyParser = require("body-parser");
 const { GITOPIA_API_URL } = require("./config");
-const { getUsername, getDAOname } = require("./util");
+const { getUsername, resolveAddress, getRepoDetails } = require("./util");
 
 // Initialize a Slack Web API client
 const web = new WebClient(process.env.SLACK_BOT_TOKEN);
@@ -67,7 +69,12 @@ function connect() {
         // Change the message format and displayed attributes based on the action value
         switch (eventAttributes["action"]) {
           case "MultiSetRepositoryBranch": {
-            const username = await getUsername(eventAttributes["Creator"]);
+            let username = "";
+            try {
+              username = await getUsername(eventAttributes["Creator"]);
+            } catch (error) {
+              username = eventAttributes["Creator"];
+            }
 
             blocks.push({
               type: "section",
@@ -99,16 +106,10 @@ function connect() {
               ],
             };
 
-            var repoOwnerName = "";
-            if (eventAttributes["RepositoryOwnerType"] === "USER") {
-              repoOwnerName = await getUsername(
-                eventAttributes["RepositoryOwnerId"]
-              );
-            } else {
-              repoOwnerName = await getDAOname(
-                eventAttributes["RepositoryOwnerId"]
-              );
-            }
+            const repoOwnerName = await resolveAddress(
+              eventAttributes["RepositoryOwnerId"],
+              eventAttributes["RepositoryOwnerType"]
+            );
 
             for (let branch of branches) {
               branchSection.fields.push(
@@ -183,16 +184,10 @@ function connect() {
 
             blocks.push(branchSection);
 
-            var repoOwnerName = "";
-            if (eventAttributes["RepositoryOwnerType"] === "USER") {
-              repoOwnerName = await getUsername(
-                eventAttributes["RepositoryOwnerId"]
-              );
-            } else {
-              repoOwnerName = await getDAOname(
-                eventAttributes["RepositoryOwnerId"]
-              );
-            }
+            const repoOwnerName = await resolveAddress(
+              eventAttributes["RepositoryOwnerId"],
+              eventAttributes["RepositoryOwnerType"]
+            );
 
             blocks.push({
               type: "section",
@@ -237,16 +232,10 @@ function connect() {
               ],
             };
 
-            var repoOwnerName = "";
-            if (eventAttributes["RepositoryOwnerType"] === "USER") {
-              repoOwnerName = await getUsername(
-                eventAttributes["RepositoryOwnerId"]
-              );
-            } else {
-              repoOwnerName = await getDAOname(
-                eventAttributes["RepositoryOwnerId"]
-              );
-            }
+            const repoOwnerName = await resolveAddress(
+              eventAttributes["RepositoryOwnerId"],
+              eventAttributes["RepositoryOwnerType"]
+            );
 
             for (let tag of tags) {
               tagSection.fields.push(
@@ -321,16 +310,10 @@ function connect() {
 
             blocks.push(tagSection);
 
-            var repoOwnerName = "";
-            if (eventAttributes["RepositoryOwnerType"] === "USER") {
-              repoOwnerName = await getUsername(
-                eventAttributes["RepositoryOwnerId"]
-              );
-            } else {
-              repoOwnerName = await getDAOname(
-                eventAttributes["RepositoryOwnerId"]
-              );
-            }
+            const repoOwnerName = await resolveAddress(
+              eventAttributes["RepositoryOwnerId"],
+              eventAttributes["RepositoryOwnerType"]
+            );
 
             blocks.push({
               type: "section",
@@ -363,45 +346,28 @@ function connect() {
             break;
           }
           case "CreateRepository": {
-            var repoOwnerName = "";
-            if (eventAttributes["RepositoryOwnerType"] === "USER") {
-              repoOwnerName = await getUsername(
-                eventAttributes["RepositoryOwnerId"]
-              );
-            } else {
-              repoOwnerName = await getDAOname(
-                eventAttributes["RepositoryOwnerId"]
-              );
-            }
+            const username = await getUsername(eventAttributes["Creator"]);
+
+            const repoOwnerName = await resolveAddress(
+              eventAttributes["RepositoryOwnerId"],
+              eventAttributes["RepositoryOwnerType"]
+            );
 
             blocks.push({
               type: "section",
               text: {
                 type: "mrkdwn",
-                text: `New repository created by <https://gitopia.com/${eventAttributes["Creator"]}|${eventAttributes["Creator"]}>\n<https://gitopia.com/${eventAttributes["RepositoryOwnerId"]}/${eventAttributes["RepositoryName"]}|${eventAttributes["RepositoryName"]}>`,
+                text: `New repository created by <https://gitopia.com/${username}|${username}>\n<https://gitopia.com/${repoOwnerName}/${eventAttributes["RepositoryName"]}|${eventAttributes["RepositoryName"]}>`,
               },
             });
             break;
           }
           case "CreateIssue": {
             try {
-              const response = await axios.get(
-                `${GITOPIA_API_URL}/repository/${eventAttributes["RepositoryId"]}`
+              const { repoOwnerName, repositoryName } = getRepoDetails(
+                eventAttributes["RepositoryId"]
               );
-              const repositoryName = response.data.Repository.name;
-
               const username = await getUsername(eventAttributes["Creator"]);
-
-              var repoOwnerName = "";
-              if (eventAttributes["RepositoryOwnerType"] === "USER") {
-                repoOwnerName = await getUsername(
-                  eventAttributes["RepositoryOwnerId"]
-                );
-              } else {
-                repoOwnerName = await getDAOname(
-                  eventAttributes["RepositoryOwnerId"]
-                );
-              }
 
               blocks.push({
                 type: "section",
@@ -415,29 +381,71 @@ function connect() {
             }
             break;
           }
-          case "CreatePullRequest": {
+          case "AddIssueAssignees": {
             try {
-              const response = await axios.get(
-                `${GITOPIA_API_URL}/repository/${eventAttributes["RepositoryId"]}`
+              const { repoOwnerName, repositoryName } = getRepoDetails(
+                eventAttributes["RepositoryId"]
               );
-              const repositoryName = response.data.Repository.name;
-              const repositoryOwnerId = response.data.Repository.owner.id;
-              const repositoryOwnerType = response.data.Repository.owner.type;
-
-              if (
-                repositoryOwnerId ===
-                "gitopia1tkvqw2mwjsjptlm08jdp04mw2834qzd7v5x9nm5us8dp04hsp4rq3c8dm9"
-              ) {
-                channel = "#engineering";
-              }
-
               const username = await getUsername(eventAttributes["Creator"]);
 
-              var repoOwnerName = "";
-              if (repositoryOwnerType === "USER") {
-                repoOwnerName = await getUsername(repositoryOwnerId);
-              } else {
-                repoOwnerName = await getDAOname(repositoryOwnerId);
+              let assignees = "";
+              for (let assignee of JSON.parse(eventAttributes["Assignees"])) {
+                const assigneeUsername = await getUsername(assignee);
+                assignees += `<https://gitopia.com/${assigneeUsername}|${assigneeUsername}>, `;
+              }
+
+              blocks.push({
+                type: "section",
+                text: {
+                  type: "mrkdwn",
+                  text: `<https://gitopia.com/${username}|${username}> assigned the issue to ${assignees}\n<https://gitopia.com/${repoOwnerName}/${repositoryName}/issues/${eventAttributes["IssueIid"]}|${repoOwnerName}/${repositoryName} #${eventAttributes["IssueIid"]}>`,
+                },
+              });
+            } catch (error) {
+              console.error(`Error getting repository details: ${error}`);
+            }
+            break;
+          }
+          case "ToggleIssueState": {
+            try {
+              const { repoOwnerName, repositoryName } = getRepoDetails(
+                eventAttributes["RepositoryId"]
+              );
+              const username = await getUsername(eventAttributes["Creator"]);
+
+              let message = "";
+              switch (eventAttributes["IssueState"]) {
+                case "OPEN":
+                  message = `<https://gitopia.com/${username}|${username}> re-opened the issue\n<https://gitopia.com/${repoOwnerName}/${repositoryName}/issues/${eventAttributes["IssueIid"]}|${repoOwnerName}/${repositoryName} #${eventAttributes["IssueIid"]}>`;
+                  break;
+                case "CLOSED":
+                  message = `<https://gitopia.com/${username}|${username}> closed the issue\n<https://gitopia.com/${repoOwnerName}/${repositoryName}/issues/${eventAttributes["IssueIid"]}|${repoOwnerName}/${repositoryName} #${eventAttributes["IssueIid"]}>`;
+                  break;
+                default:
+                  message = "Unhandled state";
+              }
+
+              blocks.push({
+                type: "section",
+                text: {
+                  type: "mrkdwn",
+                  text: message,
+                },
+              });
+            } catch (error) {
+              console.error(`Error getting repository details: ${error}`);
+            }
+            break;
+          }
+          case "CreatePullRequest": {
+            try {
+              const { repoOwnerName, repositoryName } = getRepoDetails(
+                eventAttributes["RepositoryId"]
+              );
+              const username = await getUsername(eventAttributes["Creator"]);
+
+              if (subscriptions.includes(repoOwnerName)) {
+                channel = "#engineering";
               }
 
               blocks.push({
@@ -453,25 +461,83 @@ function connect() {
             break;
           }
           case "SetPullRequestState": {
-            // TODO
-            break;
-          }
-          case "/gitopia.gitopia.gitopia.MsgCreateComment": {
             try {
-              const response = await axios.get(
-                `${GITOPIA_API_URL}/repository/${eventAttributes["RepositoryId"]}`
+              const { repoOwnerName, repositoryName } = getRepoDetails(
+                eventAttributes["RepositoryId"]
               );
-              const repositoryName = response.data.name;
+              const username = await getUsername(eventAttributes["Creator"]);
+
+              if (subscriptions.includes(repoOwnerName)) {
+                channel = "#engineering";
+              }
+
+              let message = "";
+              switch (eventAttributes["PullRequestState"]) {
+                case "MERGED": {
+                  const headRepo = JSON.parse(
+                    eventAttributes["PullRequestHead"]
+                  );
+
+                  const { headRepoOwnerName, headRepositoryName } =
+                    getRepoDetails(headRepo.repositoryId);
+                  const baseRepoBranch = JSON.parse(
+                    eventAttributes["RepositoryBranch"]
+                  );
+
+                  message = `<https://gitopia.com/${username}|${username}>  merged <https://gitopia.com/${headRepoOwnerName}/${headRepositoryName}/tree/${headRepo.branch}|${headRepoOwnerName}:${headRepositoryName}/${headRepo.branch}> to <https://gitopia.com/${repoOwnerName}/${eventAttributes["RepositoryName"]}/tree/${baseRepoBranch.name}|${baseRepoBranch.name}>\n<https://gitopia.com/${repoOwnerName}/${eventAttributes["RepositoryName"]}/pulls/${eventAttributes["PullRequestIid"]}|${repoOwnerName}/${eventAttributes["RepositoryName"]} #${eventAttributes["PullRequestIid"]}>`;
+                  break;
+                }
+                case "CLOSED":
+                  message = `PR closed by <https://gitopia.com/${username}|${username}>\n<https://gitopia.com/${repoOwnerName}/${eventAttributes["RepositoryName"]}/pulls/${eventAttributes["PullRequestIid"]}|PR #${eventAttributes["PullRequestIid"]}>`;
+                  break;
+                default:
+                  message = "Unhandled state";
+              }
+
               blocks.push({
                 type: "section",
                 text: {
                   type: "mrkdwn",
-                  text: `New comment in  by <https://gitopia.com/${eventAttributes["Creator"]}|${eventAttributes["Creator"]}>`,
+                  text: message,
                 },
               });
             } catch (error) {
               console.error(`Error getting repository details: ${error}`);
             }
+            break;
+          }
+          case "LinkPullRequestIssueByIid": {
+            try {
+              const { repoOwnerName, repositoryName } = getRepoDetails(
+                eventAttributes["RepositoryId"]
+              );
+              const username = await getUsername(eventAttributes["Creator"]);
+
+              if (subscriptions.includes(repoOwnerName)) {
+                channel = "#engineering";
+              }
+
+              blocks.push({
+                type: "section",
+                text: {
+                  type: "mrkdwn",
+                  text: `<https://gitopia.com/${username}|${username}> linked the PR to <https://gitopia.com/${repoOwnerName}/${repositoryName}/issues/${eventAttributes["IssueIid"]}|#${eventAttributes["IssueIid"]}>\n<https://gitopia.com/${repoOwnerName}/${repositoryName}/pulls/${eventAttributes["PullRequestIid"]}|${repoOwnerName}/${repositoryName} #${eventAttributes["PullRequestIid"]}>`,
+                },
+              });
+            } catch (error) {
+              console.error(`Error getting repository details: ${error}`);
+            }
+            break;
+          }
+          case "/gitopia.gitopia.gitopia.MsgCreateComment": {
+            blocks.push({
+              type: "section",
+              text: {
+                type: "mrkdwn",
+                text: "New comment somewhere :man-shrugging:",
+              },
+            });
+
             break;
           }
           case "ForkRepository": {
@@ -483,11 +549,20 @@ function connect() {
             break;
         }
 
-        if (
-          eventAttributes["RepositoryOwnerId"] ===
-          "gitopia1tkvqw2mwjsjptlm08jdp04mw2834qzd7v5x9nm5us8dp04hsp4rq3c8dm9"
-        ) {
-          channel = "#engineering";
+        const keysToCheck = ["RepositoryOwnerId", "RepositoryOwnerType"];
+        const keysExist = keysToCheck.every((key) =>
+          eventAttributes.hasOwnProperty(key)
+        );
+
+        if (keysExist) {
+          const repoOwnerName = await resolveAddress(
+            eventAttributes["RepositoryOwnerId"],
+            eventAttributes["RepositoryOwnerType"]
+          );
+
+          if (subscriptions.includes(repoOwnerName)) {
+            channel = "#engineering";
+          }
         }
 
         // Send the message to Slack
@@ -518,4 +593,64 @@ function connect() {
   });
 }
 
+let subscriptions = [];
+
 connect();
+
+const app = express();
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+
+const server = app.listen(3000, () => {
+  console.log(
+    "Express server listening on port %d in %s mode",
+    server.address().port,
+    app.settings.env
+  );
+});
+
+app.post("/", (req, res) => {
+  let message = "";
+  let text = req.body.text;
+  const args = text.split(" ");
+
+  if (args.length !== 2) {
+    message = "Invalid command";
+  }
+
+  switch (args[0]) {
+    case "subscribe": {
+      if (args[1] === "list") {
+        message = `Active subscriptions: ${subscriptions}`;
+      } else {
+        const index = subscriptions.indexOf(args[1]);
+        if (index !== -1) {
+          message = `Already subscribed to ${args[1]}`;
+        } else {
+          subscriptions.push(args[1]);
+          message = `Subscribed to ${args[1]}`;
+        }
+      }
+      break;
+    }
+    case "unsubscribe": {
+      const index = subscriptions.indexOf(args[1]);
+      if (index !== -1) {
+        subscriptions.splice(index, 1);
+        message = `Unsubscribed to ${args[1]}`;
+      } else {
+        message = `Not subscribing to ${args[1]} already`;
+      }
+      break;
+    }
+    default:
+      message = "Invalid command";
+  }
+
+  let data = {
+    response_type: "in_channel", // public to the channel
+    text: message,
+  };
+
+  res.json(data);
+});
