@@ -478,8 +478,10 @@ function connect() {
                     eventAttributes["PullRequestHead"]
                   );
 
-                  const { headRepoOwnerName, headRepositoryName } =
-                    await getRepoDetails(headRepo.repositoryId);
+                  const {
+                    repoOwnerName: headRepoOwnerName,
+                    repositoryName: headRepositoryName,
+                  } = await getRepoDetails(headRepo.repositoryId);
                   const baseRepoBranch = JSON.parse(
                     eventAttributes["RepositoryBranch"]
                   );
