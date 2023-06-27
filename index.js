@@ -5,7 +5,12 @@ const axios = require("axios");
 const express = require("express");
 const bodyParser = require("body-parser");
 const { GITOPIA_API_URL } = require("./config");
-const { getUsername, resolveAddress, getRepoDetails } = require("./util");
+const {
+  getUsername,
+  resolveAddress,
+  getRepoDetails,
+  generateSectionBlock,
+} = require("./util");
 
 // Initialize a Slack Web API client
 const web = new WebClient(process.env.SLACK_BOT_TOKEN);
@@ -455,6 +460,31 @@ function connect() {
                   text: `New PR created by <https://gitopia.com/${username}|${username}>\n<https://gitopia.com/${repoOwnerName}/${repositoryName}/pulls/${eventAttributes["PullRequestIid"]}|#${eventAttributes["PullRequestIid"]} ${eventAttributes["PullRequestTitle"]}>`,
                 },
               });
+            } catch (error) {
+              console.error(`Error getting repository details: ${error}`);
+            }
+            break;
+          }
+          case "AddPullRequestReviewers": {
+            try {
+              const { repoOwnerName, repositoryName } = await getRepoDetails(
+                eventAttributes["RepositoryId"]
+              );
+              const username = await getUsername(eventAttributes["Creator"]);
+
+              let reviewers = "";
+              for (let reviewer of JSON.parse(
+                eventAttributes["PullRequestReviewers"]
+              )) {
+                const reviewerUsername = await getUsername(reviewer);
+                reviewers += `<https://gitopia.com/${reviewerUsername}|${reviewerUsername}>, `;
+              }
+
+              blocks.push(
+                generateSectionBlock(
+                  `<https://gitopia.com/${username}|${username}> wants ${reviewers} to review the PR\n<https://gitopia.com/${repoOwnerName}/${repositoryName}/pulls/${eventAttributes["PullRequestIid"]}|${repoOwnerName}/${repositoryName} #${eventAttributes["PullRequestIid"]}>`
+                )
+              );
             } catch (error) {
               console.error(`Error getting repository details: ${error}`);
             }
