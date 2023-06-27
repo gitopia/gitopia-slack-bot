@@ -9,11 +9,9 @@ async function getUsername(address) {
     if (response.data.User.username !== "") {
       return response.data.User.username;
     }
-
-    return address;
-  } else {
-    throw new Error("Unable to retrieve username");
   }
+
+  return address;
 }
 
 async function getDAOname(address) {
