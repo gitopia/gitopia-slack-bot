@@ -74,20 +74,13 @@ function connect() {
         // Change the message format and displayed attributes based on the action value
         switch (eventAttributes["action"]) {
           case "MultiSetRepositoryBranch": {
-            let username = "";
-            try {
-              username = await getUsername(eventAttributes["Creator"]);
-            } catch (error) {
-              username = eventAttributes["Creator"];
-            }
+            const username = await getUsername(eventAttributes["Creator"]);
 
-            blocks.push({
-              type: "section",
-              text: {
-                type: "mrkdwn",
-                text: `Branches updated by <https://gitopia.com/${username}|${username}>`,
-              },
-            });
+            blocks.push(
+              generateSectionBlock(
+                `Branches updated by <https://gitopia.com/${username}|${username}>`
+              )
+            );
 
             let branches;
             try {
@@ -131,26 +124,22 @@ function connect() {
 
             blocks.push(branchSection);
 
-            blocks.push({
-              type: "section",
-              text: {
-                type: "mrkdwn",
-                text: `<https://gitopia.com/${repoOwnerName}/${eventAttributes["RepositoryName"]}|${repoOwnerName}/${eventAttributes["RepositoryName"]}>`,
-              },
-            });
+            blocks.push(
+              generateSectionBlock(
+                `<https://gitopia.com/${repoOwnerName}/${eventAttributes["RepositoryName"]}|${repoOwnerName}/${eventAttributes["RepositoryName"]}>`
+              )
+            );
 
             break;
           }
           case "MultiDeleteRepositoryBranch": {
             const username = await getUsername(eventAttributes["Creator"]);
 
-            blocks.push({
-              type: "section",
-              text: {
-                type: "mrkdwn",
-                text: `Branches deleted by <https://gitopia.com/${username}|${username}>`,
-              },
-            });
+            blocks.push(
+              generateSectionBlock(
+                `Branches deleted by <https://gitopia.com/${username}|${username}>`
+              )
+            );
 
             let branches;
             try {
@@ -194,26 +183,22 @@ function connect() {
               eventAttributes["RepositoryOwnerType"]
             );
 
-            blocks.push({
-              type: "section",
-              text: {
-                type: "mrkdwn",
-                text: `<https://gitopia.com/${repoOwnerName}/${eventAttributes["RepositoryName"]}|${repoOwnerName}/${eventAttributes["RepositoryName"]}>`,
-              },
-            });
+            blocks.push(
+              generateSectionBlock(
+                `<https://gitopia.com/${repoOwnerName}/${eventAttributes["RepositoryName"]}|${repoOwnerName}/${eventAttributes["RepositoryName"]}>`
+              )
+            );
 
             break;
           }
           case "MultiSetRepositoryTag": {
             const username = await getUsername(eventAttributes["Creator"]);
 
-            blocks.push({
-              type: "section",
-              text: {
-                type: "mrkdwn",
-                text: `Tags updated by <https://gitopia.com/${username}|${username}>`,
-              },
-            });
+            blocks.push(
+              generateSectionBlock(
+                `Tags updated by <https://gitopia.com/${username}|${username}>`
+              )
+            );
 
             let tags;
             try {
@@ -257,26 +242,22 @@ function connect() {
 
             blocks.push(tagSection);
 
-            blocks.push({
-              type: "section",
-              text: {
-                type: "mrkdwn",
-                text: `<https://gitopia.com/${repoOwnerName}/${eventAttributes["RepositoryName"]}|${repoOwnerName}/${eventAttributes["RepositoryName"]}>`,
-              },
-            });
+            blocks.push(
+              generateSectionBlock(
+                `<https://gitopia.com/${repoOwnerName}/${eventAttributes["RepositoryName"]}|${repoOwnerName}/${eventAttributes["RepositoryName"]}>`
+              )
+            );
 
             break;
           }
           case "MultiDeleteRepositoryTag": {
             const username = await getUsername(eventAttributes["Creator"]);
 
-            blocks.push({
-              type: "section",
-              text: {
-                type: "mrkdwn",
-                text: `Tags deleted by <https://gitopia.com/${username}|${username}>`,
-              },
-            });
+            blocks.push(
+              generateSectionBlock(
+                `Tags deleted by <https://gitopia.com/${username}|${username}>`
+              )
+            );
 
             let tags;
             try {
@@ -320,34 +301,28 @@ function connect() {
               eventAttributes["RepositoryOwnerType"]
             );
 
-            blocks.push({
-              type: "section",
-              text: {
-                type: "mrkdwn",
-                text: `<https://gitopia.com/${repoOwnerName}/${eventAttributes["RepositoryName"]}|${repoOwnerName}/${eventAttributes["RepositoryName"]}>`,
-              },
-            });
+            blocks.push(
+              generateSectionBlock(
+                `<https://gitopia.com/${repoOwnerName}/${eventAttributes["RepositoryName"]}|${repoOwnerName}/${eventAttributes["RepositoryName"]}>`
+              )
+            );
 
             break;
           }
           case "CreateUser": {
-            blocks.push({
-              type: "section",
-              text: {
-                type: "mrkdwn",
-                text: `New user created <https://gitopia.com/${eventAttributes["UserUsername"]}|${eventAttributes["UserUsername"]}>`,
-              },
-            });
+            blocks.push(
+              generateSectionBlock(
+                `New user created <https://gitopia.com/${eventAttributes["UserUsername"]}|${eventAttributes["UserUsername"]}>`
+              )
+            );
             break;
           }
           case "CreateDao": {
-            blocks.push({
-              type: "section",
-              text: {
-                type: "mrkdwn",
-                text: `New dao created <https://gitopia.com/${eventAttributes["DaoName"]}|${eventAttributes["DaoName"]}>`,
-              },
-            });
+            blocks.push(
+              generateSectionBlock(
+                `New dao created <https://gitopia.com/${eventAttributes["DaoName"]}|${eventAttributes["DaoName"]}>`
+              )
+            );
             break;
           }
           case "CreateRepository": {
@@ -358,13 +333,11 @@ function connect() {
               eventAttributes["RepositoryOwnerType"]
             );
 
-            blocks.push({
-              type: "section",
-              text: {
-                type: "mrkdwn",
-                text: `New repository created by <https://gitopia.com/${username}|${username}>\n<https://gitopia.com/${repoOwnerName}/${eventAttributes["RepositoryName"]}|${eventAttributes["RepositoryName"]}>`,
-              },
-            });
+            blocks.push(
+              generateSectionBlock(
+                `New repository created by <https://gitopia.com/${username}|${username}>\n<https://gitopia.com/${repoOwnerName}/${eventAttributes["RepositoryName"]}|${eventAttributes["RepositoryName"]}>`
+              )
+            );
             break;
           }
           case "CreateIssue": {
@@ -374,13 +347,11 @@ function connect() {
               );
               const username = await getUsername(eventAttributes["Creator"]);
 
-              blocks.push({
-                type: "section",
-                text: {
-                  type: "mrkdwn",
-                  text: `New issue created by <https://gitopia.com/${username}|${username}>\n<https://gitopia.com/${repoOwnerName}/${repositoryName}/issues/${eventAttributes["IssueIid"]}|#${eventAttributes["IssueIid"]} ${eventAttributes["IssueTitle"]}>`,
-                },
-              });
+              blocks.push(
+                generateSectionBlock(
+                  `New issue created by <https://gitopia.com/${username}|${username}>\n<https://gitopia.com/${repoOwnerName}/${repositoryName}/issues/${eventAttributes["IssueIid"]}|#${eventAttributes["IssueIid"]} ${eventAttributes["IssueTitle"]}>`
+                )
+              );
             } catch (error) {
               console.error(`Error getting repository details: ${error}`);
             }
@@ -399,13 +370,11 @@ function connect() {
                 assignees += `<https://gitopia.com/${assigneeUsername}|${assigneeUsername}>, `;
               }
 
-              blocks.push({
-                type: "section",
-                text: {
-                  type: "mrkdwn",
-                  text: `<https://gitopia.com/${username}|${username}> assigned the issue to ${assignees}\n<https://gitopia.com/${repoOwnerName}/${repositoryName}/issues/${eventAttributes["IssueIid"]}|${repoOwnerName}/${repositoryName} #${eventAttributes["IssueIid"]}>`,
-                },
-              });
+              blocks.push(
+                generateSectionBlock(
+                  `<https://gitopia.com/${username}|${username}> assigned the issue to ${assignees}\n<https://gitopia.com/${repoOwnerName}/${repositoryName}/issues/${eventAttributes["IssueIid"]}|${repoOwnerName}/${repositoryName} #${eventAttributes["IssueIid"]}>`
+                )
+              );
             } catch (error) {
               console.error(`Error getting repository details: ${error}`);
             }
@@ -430,13 +399,7 @@ function connect() {
                   message = "Unhandled state";
               }
 
-              blocks.push({
-                type: "section",
-                text: {
-                  type: "mrkdwn",
-                  text: message,
-                },
-              });
+              blocks.push(generateSectionBlock(message));
             } catch (error) {
               console.error(`Error getting repository details: ${error}`);
             }
@@ -453,13 +416,11 @@ function connect() {
                 channel = "#engineering";
               }
 
-              blocks.push({
-                type: "section",
-                text: {
-                  type: "mrkdwn",
-                  text: `New PR created by <https://gitopia.com/${username}|${username}>\n<https://gitopia.com/${repoOwnerName}/${repositoryName}/pulls/${eventAttributes["PullRequestIid"]}|#${eventAttributes["PullRequestIid"]} ${eventAttributes["PullRequestTitle"]}>`,
-                },
-              });
+              blocks.push(
+                generateSectionBlock(
+                  `New PR created by <https://gitopia.com/${username}|${username}>\n<https://gitopia.com/${repoOwnerName}/${repositoryName}/pulls/${eventAttributes["PullRequestIid"]}|#${eventAttributes["PullRequestIid"]} ${eventAttributes["PullRequestTitle"]}>`
+                )
+              );
             } catch (error) {
               console.error(`Error getting repository details: ${error}`);
             }
@@ -526,13 +487,7 @@ function connect() {
                   message = "Unhandled state";
               }
 
-              blocks.push({
-                type: "section",
-                text: {
-                  type: "mrkdwn",
-                  text: message,
-                },
-              });
+              blocks.push(generateSectionBlock(message));
             } catch (error) {
               console.error(`Error getting repository details: ${error}`);
             }
@@ -549,26 +504,20 @@ function connect() {
                 channel = "#engineering";
               }
 
-              blocks.push({
-                type: "section",
-                text: {
-                  type: "mrkdwn",
-                  text: `<https://gitopia.com/${username}|${username}> linked the PR to <https://gitopia.com/${repoOwnerName}/${repositoryName}/issues/${eventAttributes["IssueIid"]}|#${eventAttributes["IssueIid"]}>\n<https://gitopia.com/${repoOwnerName}/${repositoryName}/pulls/${eventAttributes["PullRequestIid"]}|${repoOwnerName}/${repositoryName} #${eventAttributes["PullRequestIid"]}>`,
-                },
-              });
+              blocks.push(
+                generateSectionBlock(
+                  `<https://gitopia.com/${username}|${username}> linked the PR to <https://gitopia.com/${repoOwnerName}/${repositoryName}/issues/${eventAttributes["IssueIid"]}|#${eventAttributes["IssueIid"]}>\n<https://gitopia.com/${repoOwnerName}/${repositoryName}/pulls/${eventAttributes["PullRequestIid"]}|${repoOwnerName}/${repositoryName} #${eventAttributes["PullRequestIid"]}>`
+                )
+              );
             } catch (error) {
               console.error(`Error getting repository details: ${error}`);
             }
             break;
           }
           case "/gitopia.gitopia.gitopia.MsgCreateComment": {
-            blocks.push({
-              type: "section",
-              text: {
-                type: "mrkdwn",
-                text: "New comment somewhere :man-shrugging:",
-              },
-            });
+            blocks.push(
+              generateSectionBlock("New comment somewhere :man-shrugging:")
+            );
 
             break;
           }
@@ -588,13 +537,11 @@ function connect() {
                 channel = "#engineering";
               }
 
-              blocks.push({
-                type: "section",
-                text: {
-                  type: "mrkdwn",
-                  text: `<https://gitopia.com/${username}|${username}> forked the repository <https://gitopia.com/${repoOwnerName}/${repositoryName}|${repoOwnerName}/${repositoryName}>\n<https://gitopia.com/${forkedRepoOwnerName}/${eventAttributes["RepositoryName"]}|${forkedRepoOwnerName}/${eventAttributes["RepositoryName"]}>`,
-                },
-              });
+              blocks.push(
+                generateSectionBlock(
+                  `<https://gitopia.com/${username}|${username}> forked the repository <https://gitopia.com/${repoOwnerName}/${repositoryName}|${repoOwnerName}/${repositoryName}>\n<https://gitopia.com/${forkedRepoOwnerName}/${eventAttributes["RepositoryName"]}|${forkedRepoOwnerName}/${eventAttributes["RepositoryName"]}>`
+                )
+              );
             } catch (error) {
               console.error(`Error getting repository details: ${error}`);
             }
