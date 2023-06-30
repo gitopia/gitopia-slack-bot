@@ -4,7 +4,7 @@ const WebSocket = require("ws");
 const axios = require("axios");
 const express = require("express");
 const bodyParser = require("body-parser");
-const { GITOPIA_API_URL } = require("./config");
+const { WS_ADDR } = require("./config");
 const {
   getUsername,
   resolveAddress,
@@ -19,7 +19,7 @@ let ws;
 
 function connect() {
   // Connect to a WebSocket server
-  ws = new WebSocket(process.env.WS_ADDR);
+  ws = new WebSocket(WS_ADDR);
 
   ws.on("open", () => {
     console.log("Connected to WebSocket server");
