@@ -60,10 +60,34 @@ const generateSectionBlock = (message) => {
   };
 };
 
+const postToSlack = async (web, subscriptions, repoOwnerName, blocks) => {
+  for (let channel in subscriptions) {
+    if (
+      subscriptions[channel].some(
+        (item) =>
+          item === "*" || item.toLowerCase() === repoOwnerName.toLowerCase()
+      )
+    ) {
+      // Send the message to Slack
+      if (blocks.length > 0) {
+        try {
+          await web.chat.postMessage({
+            channel,
+            blocks: blocks,
+          });
+        } catch (e) {
+          console.error("Error sending message to Slack:", e);
+        }
+      }
+    }
+  }
+};
+
 module.exports = {
   getUsername,
   getDAOname,
   resolveAddress,
   getRepoDetails,
   generateSectionBlock,
+  postToSlack,
 };

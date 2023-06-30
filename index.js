@@ -10,6 +10,7 @@ const {
   resolveAddress,
   getRepoDetails,
   generateSectionBlock,
+  postToSlack,
 } = require("./util");
 
 // Initialize a Slack Web API client
@@ -57,7 +58,6 @@ function connect() {
 
       // If the event type matches what we're interested in...
       if (eventType === "message") {
-        let channel = "#gitopia-activity";
         let eventAttributes = {};
 
         // Iterate over the attributes of the event
@@ -412,15 +412,13 @@ function connect() {
               );
               const username = await getUsername(eventAttributes["Creator"]);
 
-              if (subscriptions.includes(repoOwnerName)) {
-                channel = "#engineering";
-              }
-
               blocks.push(
                 generateSectionBlock(
                   `New PR created by <https://gitopia.com/${username}|${username}>\n<https://gitopia.com/${repoOwnerName}/${repositoryName}/pulls/${eventAttributes["PullRequestIid"]}|#${eventAttributes["PullRequestIid"]} ${eventAttributes["PullRequestTitle"]}>`
                 )
               );
+
+              postToSlack(web, subscriptions, repoOwnerName, blocks);
             } catch (error) {
               console.error(`Error getting repository details: ${error}`);
             }
@@ -458,10 +456,6 @@ function connect() {
               );
               const username = await getUsername(eventAttributes["Creator"]);
 
-              if (subscriptions.includes(repoOwnerName)) {
-                channel = "#engineering";
-              }
-
               let message = "";
               switch (eventAttributes["PullRequestState"]) {
                 case "MERGED": {
@@ -488,6 +482,8 @@ function connect() {
               }
 
               blocks.push(generateSectionBlock(message));
+
+              postToSlack(web, subscriptions, repoOwnerName, blocks);
             } catch (error) {
               console.error(`Error getting repository details: ${error}`);
             }
@@ -500,15 +496,13 @@ function connect() {
               );
               const username = await getUsername(eventAttributes["Creator"]);
 
-              if (subscriptions.includes(repoOwnerName)) {
-                channel = "#engineering";
-              }
-
               blocks.push(
                 generateSectionBlock(
                   `<https://gitopia.com/${username}|${username}> linked the PR to <https://gitopia.com/${repoOwnerName}/${repositoryName}/issues/${eventAttributes["IssueIid"]}|#${eventAttributes["IssueIid"]}>\n<https://gitopia.com/${repoOwnerName}/${repositoryName}/pulls/${eventAttributes["PullRequestIid"]}|${repoOwnerName}/${repositoryName} #${eventAttributes["PullRequestIid"]}>`
                 )
               );
+
+              postToSlack(web, subscriptions, repoOwnerName, blocks);
             } catch (error) {
               console.error(`Error getting repository details: ${error}`);
             }
@@ -533,15 +527,13 @@ function connect() {
                 eventAttributes["RepositoryOwnerType"]
               );
 
-              if (subscriptions.includes(repoOwnerName)) {
-                channel = "#engineering";
-              }
-
               blocks.push(
                 generateSectionBlock(
                   `<https://gitopia.com/${username}|${username}> forked the repository <https://gitopia.com/${repoOwnerName}/${repositoryName}|${repoOwnerName}/${repositoryName}>\n<https://gitopia.com/${forkedRepoOwnerName}/${eventAttributes["RepositoryName"]}|${forkedRepoOwnerName}/${eventAttributes["RepositoryName"]}>`
                 )
               );
+
+              postToSlack(web, subscriptions, repoOwnerName, blocks);
             } catch (error) {
               console.error(`Error getting repository details: ${error}`);
             }
@@ -549,7 +541,6 @@ function connect() {
           }
           default:
             console.log(`Unsupported action ${eventAttributes["action"]}`);
-            break;
         }
 
         const keysToCheck = ["RepositoryOwnerId", "RepositoryOwnerType"];
@@ -557,28 +548,15 @@ function connect() {
           eventAttributes.hasOwnProperty(key)
         );
 
+        let repoOwnerName = "";
         if (keysExist) {
-          const repoOwnerName = await resolveAddress(
+          repoOwnerName = await resolveAddress(
             eventAttributes["RepositoryOwnerId"],
             eventAttributes["RepositoryOwnerType"]
           );
-
-          if (subscriptions.includes(repoOwnerName)) {
-            channel = "#engineering";
-          }
         }
 
-        // Send the message to Slack
-        if (blocks.length > 0) {
-          try {
-            await web.chat.postMessage({
-              channel,
-              blocks: blocks,
-            });
-          } catch (e) {
-            console.error("Error sending message to Slack:", e);
-          }
-        }
+        postToSlack(web, subscriptions, repoOwnerName, blocks);
       }
     }
   });
@@ -596,7 +574,7 @@ function connect() {
   });
 }
 
-let subscriptions = [];
+let subscriptions = {};
 
 connect();
 
@@ -614,32 +592,38 @@ const server = app.listen(3000, () => {
 
 app.post("/", (req, res) => {
   let message = "";
-  let text = req.body.text;
+  const text = req.body.text;
   const args = text.split(" ");
 
   if (args.length !== 2) {
     message = "Invalid command";
   }
 
+  const channel = req.body.channel_name;
+
+  if (!subscriptions[channel]) {
+    subscriptions[channel] = [];
+  }
+
   switch (args[0]) {
     case "subscribe": {
       if (args[1] === "list") {
-        message = `Active subscriptions: ${subscriptions}`;
+        message = `Active subscriptions: ${subscriptions[channel]}`;
       } else {
-        const index = subscriptions.indexOf(args[1]);
+        const index = subscriptions[channel].indexOf(args[1]);
         if (index !== -1) {
           message = `Already subscribed to ${args[1]}`;
         } else {
-          subscriptions.push(args[1]);
+          subscriptions[channel].push(args[1]);
           message = `Subscribed to ${args[1]}`;
         }
       }
       break;
     }
     case "unsubscribe": {
-      const index = subscriptions.indexOf(args[1]);
+      const index = subscriptions[channel].indexOf(args[1]);
       if (index !== -1) {
-        subscriptions.splice(index, 1);
+        subscriptions[channel].splice(index, 1);
         message = `Unsubscribed to ${args[1]}`;
       } else {
         message = `Not subscribing to ${args[1]} already`;
@@ -651,7 +635,7 @@ app.post("/", (req, res) => {
   }
 
   let data = {
-    response_type: "in_channel", // public to the channel
+    response_type: "ephemeral",
     text: message,
   };
 
