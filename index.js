@@ -482,8 +482,6 @@ function connect() {
               }
 
               blocks.push(generateSectionBlock(message));
-
-              postToSlack(web, subscriptions, repoOwnerName, blocks);
             } catch (error) {
               console.error(`Error getting repository details: ${error}`);
             }
@@ -501,8 +499,6 @@ function connect() {
                   `<https://gitopia.com/${username}|${username}> linked the PR to <https://gitopia.com/${repoOwnerName}/${repositoryName}/issues/${eventAttributes["IssueIid"]}|#${eventAttributes["IssueIid"]}>\n<https://gitopia.com/${repoOwnerName}/${repositoryName}/pulls/${eventAttributes["PullRequestIid"]}|${repoOwnerName}/${repositoryName} #${eventAttributes["PullRequestIid"]}>`
                 )
               );
-
-              postToSlack(web, subscriptions, repoOwnerName, blocks);
             } catch (error) {
               console.error(`Error getting repository details: ${error}`);
             }
@@ -532,8 +528,6 @@ function connect() {
                   `<https://gitopia.com/${username}|${username}> forked the repository <https://gitopia.com/${repoOwnerName}/${repositoryName}|${repoOwnerName}/${repositoryName}>\n<https://gitopia.com/${forkedRepoOwnerName}/${eventAttributes["RepositoryName"]}|${forkedRepoOwnerName}/${eventAttributes["RepositoryName"]}>`
                 )
               );
-
-              postToSlack(web, subscriptions, repoOwnerName, blocks);
             } catch (error) {
               console.error(`Error getting repository details: ${error}`);
             }
