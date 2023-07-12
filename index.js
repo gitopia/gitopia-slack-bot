@@ -504,6 +504,23 @@ function connect() {
             }
             break;
           }
+          case "UnlinkPullRequestIssueByIid": {
+            try {
+              const { repoOwnerName, repositoryName } = await getRepoDetails(
+                eventAttributes["RepositoryId"]
+              );
+              const username = await getUsername(eventAttributes["Creator"]);
+
+              blocks.push(
+                generateSectionBlock(
+                  `<https://gitopia.com/${username}|${username}> unlinked the PR from <https://gitopia.com/${repoOwnerName}/${repositoryName}/issues/${eventAttributes["IssueIid"]}|#${eventAttributes["IssueIid"]}>\n<https://gitopia.com/${repoOwnerName}/${repositoryName}/pulls/${eventAttributes["PullRequestIid"]}|${repoOwnerName}/${repositoryName} #${eventAttributes["PullRequestIid"]}>`
+                )
+              );
+            } catch (error) {
+              console.error(`Error getting repository details: ${error}`);
+            }
+            break;
+          }
           case "/gitopia.gitopia.gitopia.MsgCreateComment": {
             blocks.push(
               generateSectionBlock("New comment somewhere :man-shrugging:")
@@ -526,6 +543,70 @@ function connect() {
               blocks.push(
                 generateSectionBlock(
                   `<https://gitopia.com/${username}|${username}> forked the repository <https://gitopia.com/${repoOwnerName}/${repositoryName}|${repoOwnerName}/${repositoryName}>\n<https://gitopia.com/${forkedRepoOwnerName}/${eventAttributes["RepositoryName"]}|${forkedRepoOwnerName}/${eventAttributes["RepositoryName"]}>`
+                )
+              );
+            } catch (error) {
+              console.error(`Error getting repository details: ${error}`);
+            }
+            break;
+          }
+          case "CreateBounty": {
+            try {
+              const { repoOwnerName, repositoryName } = await getRepoDetails(
+                eventAttributes["RepositoryId"]
+              );
+              const username = await getUsername(eventAttributes["Creator"]);
+
+              blocks.push(
+                generateSectionBlock(
+                  `<https://gitopia.com/${username}|${username}> created a bounty in <https://gitopia.com/${repoOwnerName}/${repositoryName}/issues/${eventAttributes["BountyParentIid"]}|#${eventAttributes["BountyParentIid"]}>\n<https://gitopia.com/${repoOwnerName}/${repositoryName}/issues/${eventAttributes["BountyParentIid"]}/bounties|${repoOwnerName}/${repositoryName} #${eventAttributes["BountyParentIid"]}/bounties>`
+                )
+              );
+
+              let tokens = JSON.parse(eventAttributes["BountyAmount"]);
+              let tokenSection = {
+                type: "section",
+                fields: [
+                  {
+                    type: "mrkdwn",
+                    text: "*Denom*",
+                  },
+                  {
+                    type: "mrkdwn",
+                    text: "*Amount*",
+                  },
+                ],
+              };
+
+              for (let token of tokens) {
+                tokenSection.fields.push(
+                  {
+                    type: "mrkdwn",
+                    text: token.denom,
+                  },
+                  {
+                    type: "mrkdwn",
+                    text: token.amount,
+                  }
+                );
+              }
+
+              blocks.push(tokenSection);
+            } catch (error) {
+              console.error(`Error getting repository details: ${error}`);
+            }
+            break;
+          }
+          case "CloseBounty": {
+            try {
+              const { repoOwnerName, repositoryName } = await getRepoDetails(
+                eventAttributes["RepositoryId"]
+              );
+              const username = await getUsername(eventAttributes["Creator"]);
+
+              blocks.push(
+                generateSectionBlock(
+                  `<https://gitopia.com/${username}|${username}> closed a bounty in <https://gitopia.com/${repoOwnerName}/${repositoryName}/issues/${eventAttributes["BountyParentIid"]}|#${eventAttributes["BountyParentIid"]}>\n<https://gitopia.com/${repoOwnerName}/${repositoryName}/issues/${eventAttributes["BountyParentIid"]}/bounties|${repoOwnerName}/${repositoryName} #${eventAttributes["BountyParentIid"]}/bounties>`
                 )
               );
             } catch (error) {
