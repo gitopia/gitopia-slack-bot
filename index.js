@@ -417,8 +417,6 @@ function connect() {
                   `New PR created by <https://gitopia.com/${username}|${username}>\n<https://gitopia.com/${repoOwnerName}/${repositoryName}/pulls/${eventAttributes["PullRequestIid"]}|#${eventAttributes["PullRequestIid"]} ${eventAttributes["PullRequestTitle"]}>`
                 )
               );
-
-              postToSlack(web, subscriptions, repoOwnerName, blocks);
             } catch (error) {
               console.error(`Error getting repository details: ${error}`);
             }
