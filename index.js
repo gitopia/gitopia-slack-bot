@@ -372,7 +372,14 @@ function connect() {
 
               blocks.push(
                 generateSectionBlock(
-                  `<https://gitopia.com/${username}|${username}> assigned the issue to ${assignees}\n<https://gitopia.com/${repoOwnerName}/${repositoryName}/issues/${eventAttributes["IssueIid"]}|${repoOwnerName}/${repositoryName} #${eventAttributes["IssueIid"]}>`
+                  `<https://gitopia.com/${username}|${username}> assigned the issue to ${assignees.slice(
+                    0,
+                    -2
+                  )}\n<https://gitopia.com/${repoOwnerName}/${repositoryName}/issues/${
+                    eventAttributes["IssueIid"]
+                  }|${repoOwnerName}/${repositoryName} #${
+                    eventAttributes["IssueIid"]
+                  }>`
                 )
               );
             } catch (error) {
@@ -439,7 +446,14 @@ function connect() {
 
               blocks.push(
                 generateSectionBlock(
-                  `<https://gitopia.com/${username}|${username}> wants ${reviewers} to review the PR\n<https://gitopia.com/${repoOwnerName}/${repositoryName}/pulls/${eventAttributes["PullRequestIid"]}|${repoOwnerName}/${repositoryName} #${eventAttributes["PullRequestIid"]}>`
+                  `<https://gitopia.com/${username}|${username}> wants ${reviewers.slice(
+                    0,
+                    -2
+                  )} to review the PR\n<https://gitopia.com/${repoOwnerName}/${repositoryName}/pulls/${
+                    eventAttributes["PullRequestIid"]
+                  }|${repoOwnerName}/${repositoryName} #${
+                    eventAttributes["PullRequestIid"]
+                  }>`
                 )
               );
             } catch (error) {
@@ -590,6 +604,32 @@ function connect() {
               }
 
               blocks.push(tokenSection);
+            } catch (error) {
+              console.error(`Error getting repository details: ${error}`);
+            }
+            break;
+          }
+          case "UpdateBountyExpiry": {
+            try {
+              const { repoOwnerName, repositoryName } = await getRepoDetails(
+                eventAttributes["RepositoryId"]
+              );
+              const username = await getUsername(eventAttributes["Creator"]);
+              const expiry = new Date(eventAttributes["BountyExpiry"] * 1000);
+
+              blocks.push(
+                generateSectionBlock(
+                  `<https://gitopia.com/${username}|${username}> updated the bounty expiry to ${expiry.toLocaleDateString()} in <https://gitopia.com/${repoOwnerName}/${repositoryName}/issues/${
+                    eventAttributes["BountyParentIid"]
+                  }|#${
+                    eventAttributes["BountyParentIid"]
+                  }>\n<https://gitopia.com/${repoOwnerName}/${repositoryName}/issues/${
+                    eventAttributes["BountyParentIid"]
+                  }/bounties|${repoOwnerName}/${repositoryName} #${
+                    eventAttributes["BountyParentIid"]
+                  }/bounties>`
+                )
+              );
             } catch (error) {
               console.error(`Error getting repository details: ${error}`);
             }

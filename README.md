@@ -6,7 +6,6 @@ Slack bot for pushing gitopia activities to slack channel
 
 ```
 SLACK_BOT_TOKEN
-WS_ADDR
 ```
 
 ## Usage
