@@ -1,6 +1,17 @@
 require("dotenv").config();
 const { WebClient } = require("@slack/web-api");
 const WebSocket = require("ws");
+const axios = require("axios");
+const express = require("express");
+const bodyParser = require("body-parser");
+const { WS_ADDR } = require("./config");
+const {
+  getUsername,
+  resolveAddress,
+  getRepoDetails,
+  generateSectionBlock,
+  postToSlack,
+} = require("./util");
 
 // Initialize a Slack Web API client
 const web = new WebClient(process.env.SLACK_BOT_TOKEN);
@@ -8,7 +19,7 @@ let ws;
 
 function connect() {
   // Connect to a WebSocket server
-  ws = new WebSocket(process.env.WS_ADDR);
+  ws = new WebSocket(WS_ADDR);
 
   ws.on("open", () => {
     console.log("Connected to WebSocket server");
@@ -47,7 +58,6 @@ function connect() {
 
       // If the event type matches what we're interested in...
       if (eventType === "message") {
-        let channel = "#gitopia-activity";
         let eventAttributes = {};
 
         // Iterate over the attributes of the event
@@ -64,13 +74,13 @@ function connect() {
         // Change the message format and displayed attributes based on the action value
         switch (eventAttributes["action"]) {
           case "MultiSetRepositoryBranch": {
-            blocks.push({
-              type: "section",
-              text: {
-                type: "mrkdwn",
-                text: `Branches updated by <https://gitopia.com/${eventAttributes["Creator"]}|${eventAttributes["Creator"]}>`,
-              },
-            });
+            const username = await getUsername(eventAttributes["Creator"]);
+
+            blocks.push(
+              generateSectionBlock(
+                `Branches updated by <https://gitopia.com/${username}|${username}>`
+              )
+            );
 
             let branches;
             try {
@@ -94,11 +104,16 @@ function connect() {
               ],
             };
 
+            const repoOwnerName = await resolveAddress(
+              eventAttributes["RepositoryOwnerId"],
+              eventAttributes["RepositoryOwnerType"]
+            );
+
             for (let branch of branches) {
               branchSection.fields.push(
                 {
                   type: "mrkdwn",
-                  text: `<https://gitopia.com/${eventAttributes["RepositoryOwnerId"]}/${eventAttributes["RepositoryName"]}/tree/${branch.name}|${branch.name}>`,
+                  text: `<https://gitopia.com/${repoOwnerName}/${eventAttributes["RepositoryName"]}/tree/${branch.name}|${branch.name}>`,
                 },
                 {
                   type: "mrkdwn",
@@ -109,24 +124,22 @@ function connect() {
 
             blocks.push(branchSection);
 
-            blocks.push({
-              type: "section",
-              text: {
-                type: "mrkdwn",
-                text: `<https://gitopia.com/${eventAttributes["RepositoryOwnerId"]}/${eventAttributes["RepositoryName"]}|${eventAttributes["RepositoryOwnerId"]}/${eventAttributes["RepositoryName"]}>`,
-              },
-            });
+            blocks.push(
+              generateSectionBlock(
+                `<https://gitopia.com/${repoOwnerName}/${eventAttributes["RepositoryName"]}|${repoOwnerName}/${eventAttributes["RepositoryName"]}>`
+              )
+            );
 
             break;
           }
           case "MultiDeleteRepositoryBranch": {
-            blocks.push({
-              type: "section",
-              text: {
-                type: "mrkdwn",
-                text: `Branches deleted by <https://gitopia.com/${eventAttributes["Creator"]}|${eventAttributes["Creator"]}>`,
-              },
-            });
+            const username = await getUsername(eventAttributes["Creator"]);
+
+            blocks.push(
+              generateSectionBlock(
+                `Branches deleted by <https://gitopia.com/${username}|${username}>`
+              )
+            );
 
             let branches;
             try {
@@ -165,24 +178,27 @@ function connect() {
 
             blocks.push(branchSection);
 
-            blocks.push({
-              type: "section",
-              text: {
-                type: "mrkdwn",
-                text: `<https://gitopia.com/${eventAttributes["RepositoryOwnerId"]}/${eventAttributes["RepositoryName"]}|${eventAttributes["RepositoryOwnerId"]}/${eventAttributes["RepositoryName"]}>`,
-              },
-            });
+            const repoOwnerName = await resolveAddress(
+              eventAttributes["RepositoryOwnerId"],
+              eventAttributes["RepositoryOwnerType"]
+            );
+
+            blocks.push(
+              generateSectionBlock(
+                `<https://gitopia.com/${repoOwnerName}/${eventAttributes["RepositoryName"]}|${repoOwnerName}/${eventAttributes["RepositoryName"]}>`
+              )
+            );
 
             break;
           }
           case "MultiSetRepositoryTag": {
-            blocks.push({
-              type: "section",
-              text: {
-                type: "mrkdwn",
-                text: `Tags updated by <https://gitopia.com/${eventAttributes["Creator"]}|${eventAttributes["Creator"]}>`,
-              },
-            });
+            const username = await getUsername(eventAttributes["Creator"]);
+
+            blocks.push(
+              generateSectionBlock(
+                `Tags updated by <https://gitopia.com/${username}|${username}>`
+              )
+            );
 
             let tags;
             try {
@@ -206,11 +222,16 @@ function connect() {
               ],
             };
 
+            const repoOwnerName = await resolveAddress(
+              eventAttributes["RepositoryOwnerId"],
+              eventAttributes["RepositoryOwnerType"]
+            );
+
             for (let tag of tags) {
               tagSection.fields.push(
                 {
                   type: "mrkdwn",
-                  text: `<https://gitopia.com/${eventAttributes["RepositoryOwnerId"]}/${eventAttributes["RepositoryName"]}/tree/${tag.name}|${tag.name}>`,
+                  text: `<https://gitopia.com/${repoOwnerName}/${eventAttributes["RepositoryName"]}/tree/${tag.name}|${tag.name}>`,
                 },
                 {
                   type: "mrkdwn",
@@ -221,24 +242,22 @@ function connect() {
 
             blocks.push(tagSection);
 
-            blocks.push({
-              type: "section",
-              text: {
-                type: "mrkdwn",
-                text: `<https://gitopia.com/${eventAttributes["RepositoryOwnerId"]}/${eventAttributes["RepositoryName"]}|${eventAttributes["RepositoryOwnerId"]}/${eventAttributes["RepositoryName"]}>`,
-              },
-            });
+            blocks.push(
+              generateSectionBlock(
+                `<https://gitopia.com/${repoOwnerName}/${eventAttributes["RepositoryName"]}|${repoOwnerName}/${eventAttributes["RepositoryName"]}>`
+              )
+            );
 
             break;
           }
           case "MultiDeleteRepositoryTag": {
-            blocks.push({
-              type: "section",
-              text: {
-                type: "mrkdwn",
-                text: `Tags deleted by <https://gitopia.com/${eventAttributes["Creator"]}|${eventAttributes["Creator"]}>`,
-              },
-            });
+            const username = await getUsername(eventAttributes["Creator"]);
+
+            blocks.push(
+              generateSectionBlock(
+                `Tags deleted by <https://gitopia.com/${username}|${username}>`
+              )
+            );
 
             let tags;
             try {
@@ -277,104 +296,380 @@ function connect() {
 
             blocks.push(tagSection);
 
-            blocks.push({
-              type: "section",
-              text: {
-                type: "mrkdwn",
-                text: `<https://gitopia.com/${eventAttributes["RepositoryOwnerId"]}/${eventAttributes["RepositoryName"]}|${eventAttributes["RepositoryOwnerId"]}/${eventAttributes["RepositoryName"]}>`,
-              },
-            });
+            const repoOwnerName = await resolveAddress(
+              eventAttributes["RepositoryOwnerId"],
+              eventAttributes["RepositoryOwnerType"]
+            );
+
+            blocks.push(
+              generateSectionBlock(
+                `<https://gitopia.com/${repoOwnerName}/${eventAttributes["RepositoryName"]}|${repoOwnerName}/${eventAttributes["RepositoryName"]}>`
+              )
+            );
 
             break;
           }
           case "CreateUser": {
-            blocks.push({
-              type: "section",
-              text: {
-                type: "mrkdwn",
-                text: `New user created <https://gitopia.com/${eventAttributes["UserUsername"]}|${eventAttributes["UserUsername"]}>`,
-              },
-            });
+            blocks.push(
+              generateSectionBlock(
+                `New user created <https://gitopia.com/${eventAttributes["UserUsername"]}|${eventAttributes["UserUsername"]}>`
+              )
+            );
             break;
           }
           case "CreateDao": {
-            blocks.push({
-              type: "section",
-              text: {
-                type: "mrkdwn",
-                text: `New dao created <https://gitopia.com/${eventAttributes["DaoName"]}|${eventAttributes["DaoName"]}>`,
-              },
-            });
+            blocks.push(
+              generateSectionBlock(
+                `New dao created <https://gitopia.com/${eventAttributes["DaoName"]}|${eventAttributes["DaoName"]}>`
+              )
+            );
             break;
           }
           case "CreateRepository": {
-            blocks.push({
-              type: "section",
-              text: {
-                type: "mrkdwn",
-                text: `New repository created by <https://gitopia.com/${eventAttributes["Creator"]}|${eventAttributes["Creator"]}>\n<https://gitopia.com/${eventAttributes["RepositoryOwnerId"]}/${eventAttributes["RepositoryName"]}|${eventAttributes["RepositoryName"]}>`,
-              },
-            });
+            const username = await getUsername(eventAttributes["Creator"]);
+
+            const repoOwnerName = await resolveAddress(
+              eventAttributes["RepositoryOwnerId"],
+              eventAttributes["RepositoryOwnerType"]
+            );
+
+            blocks.push(
+              generateSectionBlock(
+                `New repository created by <https://gitopia.com/${username}|${username}>\n<https://gitopia.com/${repoOwnerName}/${eventAttributes["RepositoryName"]}|${eventAttributes["RepositoryName"]}>`
+              )
+            );
             break;
           }
           case "CreateIssue": {
-            blocks.push({
-              type: "section",
-              text: {
-                type: "mrkdwn",
-                text: `New issue created by <https://gitopia.com/${eventAttributes["Creator"]}|${eventAttributes["Creator"]}>\n<https://gitopia.com/${eventAttributes["RepositoryOwnerId"]}/${eventAttributes["RepositoryName"]}/issues/${eventAttributes["IssueIid"]}|#${eventAttributes["IssueIid"]} ${eventAttributes["IssueTitle"]}>`,
-              },
-            });
+            try {
+              const { repoOwnerName, repositoryName } = await getRepoDetails(
+                eventAttributes["RepositoryId"]
+              );
+              const username = await getUsername(eventAttributes["Creator"]);
+
+              blocks.push(
+                generateSectionBlock(
+                  `New issue created by <https://gitopia.com/${username}|${username}>\n<https://gitopia.com/${repoOwnerName}/${repositoryName}/issues/${eventAttributes["IssueIid"]}|#${eventAttributes["IssueIid"]} ${eventAttributes["IssueTitle"]}>`
+                )
+              );
+            } catch (error) {
+              console.error(`Error getting repository details: ${error}`);
+            }
             break;
           }
-          case "/gitopia.gitopia.gitopia.MsgCreatePullRequest": {
-            blocks.push({
-              type: "section",
-              text: {
-                type: "mrkdwn",
-                text: `New pull request created by <https://gitopia.com/${eventAttributes["Creator"]}|${eventAttributes["Creator"]}>\n<https://gitopia.com/${eventAttributes["RepositoryOwnerId"]}/${eventAttributes["RepositoryName"]}/pulls/${eventAttributes["PullRequestIid"]}|#${eventAttributes["PullRequestIid"]} ${eventAttributes["PullRequestTitle"]}>`,
-              },
-            });
+          case "AddIssueAssignees": {
+            try {
+              const { repoOwnerName, repositoryName } = await getRepoDetails(
+                eventAttributes["RepositoryId"]
+              );
+              const username = await getUsername(eventAttributes["Creator"]);
+
+              let assignees = "";
+              for (let assignee of JSON.parse(eventAttributes["Assignees"])) {
+                const assigneeUsername = await getUsername(assignee);
+                assignees += `<https://gitopia.com/${assigneeUsername}|${assigneeUsername}>, `;
+              }
+
+              blocks.push(
+                generateSectionBlock(
+                  `<https://gitopia.com/${username}|${username}> assigned the issue to ${assignees.slice(
+                    0,
+                    -2
+                  )}\n<https://gitopia.com/${repoOwnerName}/${repositoryName}/issues/${
+                    eventAttributes["IssueIid"]
+                  }|${repoOwnerName}/${repositoryName} #${
+                    eventAttributes["IssueIid"]
+                  }>`
+                )
+              );
+            } catch (error) {
+              console.error(`Error getting repository details: ${error}`);
+            }
+            break;
+          }
+          case "ToggleIssueState": {
+            try {
+              const { repoOwnerName, repositoryName } = await getRepoDetails(
+                eventAttributes["RepositoryId"]
+              );
+              const username = await getUsername(eventAttributes["Creator"]);
+
+              let message = "";
+              switch (eventAttributes["IssueState"]) {
+                case "OPEN":
+                  message = `<https://gitopia.com/${username}|${username}> re-opened the issue\n<https://gitopia.com/${repoOwnerName}/${repositoryName}/issues/${eventAttributes["IssueIid"]}|${repoOwnerName}/${repositoryName} #${eventAttributes["IssueIid"]}>`;
+                  break;
+                case "CLOSED":
+                  message = `<https://gitopia.com/${username}|${username}> closed the issue\n<https://gitopia.com/${repoOwnerName}/${repositoryName}/issues/${eventAttributes["IssueIid"]}|${repoOwnerName}/${repositoryName} #${eventAttributes["IssueIid"]}>`;
+                  break;
+                default:
+                  message = "Unhandled state";
+              }
+
+              blocks.push(generateSectionBlock(message));
+            } catch (error) {
+              console.error(`Error getting repository details: ${error}`);
+            }
+            break;
+          }
+          case "CreatePullRequest": {
+            try {
+              const { repoOwnerName, repositoryName } = await getRepoDetails(
+                eventAttributes["RepositoryId"]
+              );
+              const username = await getUsername(eventAttributes["Creator"]);
+
+              blocks.push(
+                generateSectionBlock(
+                  `New PR created by <https://gitopia.com/${username}|${username}>\n<https://gitopia.com/${repoOwnerName}/${repositoryName}/pulls/${eventAttributes["PullRequestIid"]}|#${eventAttributes["PullRequestIid"]} ${eventAttributes["PullRequestTitle"]}>`
+                )
+              );
+            } catch (error) {
+              console.error(`Error getting repository details: ${error}`);
+            }
+            break;
+          }
+          case "AddPullRequestReviewers": {
+            try {
+              const { repoOwnerName, repositoryName } = await getRepoDetails(
+                eventAttributes["RepositoryId"]
+              );
+              const username = await getUsername(eventAttributes["Creator"]);
+
+              let reviewers = "";
+              for (let reviewer of JSON.parse(
+                eventAttributes["PullRequestReviewers"]
+              )) {
+                const reviewerUsername = await getUsername(reviewer);
+                reviewers += `<https://gitopia.com/${reviewerUsername}|${reviewerUsername}>, `;
+              }
+
+              blocks.push(
+                generateSectionBlock(
+                  `<https://gitopia.com/${username}|${username}> wants ${reviewers.slice(
+                    0,
+                    -2
+                  )} to review the PR\n<https://gitopia.com/${repoOwnerName}/${repositoryName}/pulls/${
+                    eventAttributes["PullRequestIid"]
+                  }|${repoOwnerName}/${repositoryName} #${
+                    eventAttributes["PullRequestIid"]
+                  }>`
+                )
+              );
+            } catch (error) {
+              console.error(`Error getting repository details: ${error}`);
+            }
             break;
           }
           case "SetPullRequestState": {
-            // TODO
+            try {
+              const { repoOwnerName, repositoryName } = await getRepoDetails(
+                eventAttributes["RepositoryId"]
+              );
+              const username = await getUsername(eventAttributes["Creator"]);
+
+              let message = "";
+              switch (eventAttributes["PullRequestState"]) {
+                case "MERGED": {
+                  const headRepo = JSON.parse(
+                    eventAttributes["PullRequestHead"]
+                  );
+
+                  const {
+                    repoOwnerName: headRepoOwnerName,
+                    repositoryName: headRepositoryName,
+                  } = await getRepoDetails(headRepo.repositoryId);
+                  const baseRepoBranch = JSON.parse(
+                    eventAttributes["RepositoryBranch"]
+                  );
+
+                  message = `<https://gitopia.com/${username}|${username}>  merged <https://gitopia.com/${headRepoOwnerName}/${headRepositoryName}/tree/${headRepo.branch}|${headRepoOwnerName}:${headRepositoryName}/${headRepo.branch}> to <https://gitopia.com/${repoOwnerName}/${eventAttributes["RepositoryName"]}/tree/${baseRepoBranch.name}|${baseRepoBranch.name}>\n<https://gitopia.com/${repoOwnerName}/${eventAttributes["RepositoryName"]}/pulls/${eventAttributes["PullRequestIid"]}|${repoOwnerName}/${eventAttributes["RepositoryName"]} #${eventAttributes["PullRequestIid"]}>`;
+                  break;
+                }
+                case "CLOSED":
+                  message = `PR closed by <https://gitopia.com/${username}|${username}>\n<https://gitopia.com/${repoOwnerName}/${eventAttributes["RepositoryName"]}/pulls/${eventAttributes["PullRequestIid"]}|PR #${eventAttributes["PullRequestIid"]}>`;
+                  break;
+                default:
+                  message = "Unhandled state";
+              }
+
+              blocks.push(generateSectionBlock(message));
+            } catch (error) {
+              console.error(`Error getting repository details: ${error}`);
+            }
+            break;
+          }
+          case "LinkPullRequestIssueByIid": {
+            try {
+              const { repoOwnerName, repositoryName } = await getRepoDetails(
+                eventAttributes["RepositoryId"]
+              );
+              const username = await getUsername(eventAttributes["Creator"]);
+
+              blocks.push(
+                generateSectionBlock(
+                  `<https://gitopia.com/${username}|${username}> linked the PR to <https://gitopia.com/${repoOwnerName}/${repositoryName}/issues/${eventAttributes["IssueIid"]}|#${eventAttributes["IssueIid"]}>\n<https://gitopia.com/${repoOwnerName}/${repositoryName}/pulls/${eventAttributes["PullRequestIid"]}|${repoOwnerName}/${repositoryName} #${eventAttributes["PullRequestIid"]}>`
+                )
+              );
+            } catch (error) {
+              console.error(`Error getting repository details: ${error}`);
+            }
+            break;
+          }
+          case "UnlinkPullRequestIssueByIid": {
+            try {
+              const { repoOwnerName, repositoryName } = await getRepoDetails(
+                eventAttributes["RepositoryId"]
+              );
+              const username = await getUsername(eventAttributes["Creator"]);
+
+              blocks.push(
+                generateSectionBlock(
+                  `<https://gitopia.com/${username}|${username}> unlinked the PR from <https://gitopia.com/${repoOwnerName}/${repositoryName}/issues/${eventAttributes["IssueIid"]}|#${eventAttributes["IssueIid"]}>\n<https://gitopia.com/${repoOwnerName}/${repositoryName}/pulls/${eventAttributes["PullRequestIid"]}|${repoOwnerName}/${repositoryName} #${eventAttributes["PullRequestIid"]}>`
+                )
+              );
+            } catch (error) {
+              console.error(`Error getting repository details: ${error}`);
+            }
             break;
           }
           case "/gitopia.gitopia.gitopia.MsgCreateComment": {
-            blocks.push({
-              type: "section",
-              text: {
-                type: "mrkdwn",
-                text: `New comment created by <https://gitopia.com/${eventAttributes["Creator"]}|${eventAttributes["Creator"]}>`,
-              },
-            });
+            blocks.push(
+              generateSectionBlock("New comment somewhere :man-shrugging:")
+            );
+
+            break;
+          }
+          case "ForkRepository": {
+            try {
+              const { repoOwnerName, repositoryName } = await getRepoDetails(
+                eventAttributes["ParentRepositoryId"]
+              );
+              const username = await getUsername(eventAttributes["Creator"]);
+
+              const forkedRepoOwnerName = await resolveAddress(
+                eventAttributes["RepositoryOwnerId"],
+                eventAttributes["RepositoryOwnerType"]
+              );
+
+              blocks.push(
+                generateSectionBlock(
+                  `<https://gitopia.com/${username}|${username}> forked the repository <https://gitopia.com/${repoOwnerName}/${repositoryName}|${repoOwnerName}/${repositoryName}>\n<https://gitopia.com/${forkedRepoOwnerName}/${eventAttributes["RepositoryName"]}|${forkedRepoOwnerName}/${eventAttributes["RepositoryName"]}>`
+                )
+              );
+            } catch (error) {
+              console.error(`Error getting repository details: ${error}`);
+            }
+            break;
+          }
+          case "CreateBounty": {
+            try {
+              const { repoOwnerName, repositoryName } = await getRepoDetails(
+                eventAttributes["RepositoryId"]
+              );
+              const username = await getUsername(eventAttributes["Creator"]);
+
+              blocks.push(
+                generateSectionBlock(
+                  `<https://gitopia.com/${username}|${username}> created a bounty in <https://gitopia.com/${repoOwnerName}/${repositoryName}/issues/${eventAttributes["BountyParentIid"]}|#${eventAttributes["BountyParentIid"]}>\n<https://gitopia.com/${repoOwnerName}/${repositoryName}/issues/${eventAttributes["BountyParentIid"]}/bounties|${repoOwnerName}/${repositoryName} #${eventAttributes["BountyParentIid"]}/bounties>`
+                )
+              );
+
+              let tokens = JSON.parse(eventAttributes["BountyAmount"]);
+              let tokenSection = {
+                type: "section",
+                fields: [
+                  {
+                    type: "mrkdwn",
+                    text: "*Denom*",
+                  },
+                  {
+                    type: "mrkdwn",
+                    text: "*Amount*",
+                  },
+                ],
+              };
+
+              for (let token of tokens) {
+                tokenSection.fields.push(
+                  {
+                    type: "mrkdwn",
+                    text: token.denom,
+                  },
+                  {
+                    type: "mrkdwn",
+                    text: token.amount,
+                  }
+                );
+              }
+
+              blocks.push(tokenSection);
+            } catch (error) {
+              console.error(`Error getting repository details: ${error}`);
+            }
+            break;
+          }
+          case "UpdateBountyExpiry": {
+            try {
+              const { repoOwnerName, repositoryName } = await getRepoDetails(
+                eventAttributes["RepositoryId"]
+              );
+              const username = await getUsername(eventAttributes["Creator"]);
+              const expiry = new Date(eventAttributes["BountyExpiry"] * 1000);
+
+              blocks.push(
+                generateSectionBlock(
+                  `<https://gitopia.com/${username}|${username}> updated the bounty expiry to ${expiry.toLocaleDateString()} in <https://gitopia.com/${repoOwnerName}/${repositoryName}/issues/${
+                    eventAttributes["BountyParentIid"]
+                  }|#${
+                    eventAttributes["BountyParentIid"]
+                  }>\n<https://gitopia.com/${repoOwnerName}/${repositoryName}/issues/${
+                    eventAttributes["BountyParentIid"]
+                  }/bounties|${repoOwnerName}/${repositoryName} #${
+                    eventAttributes["BountyParentIid"]
+                  }/bounties>`
+                )
+              );
+            } catch (error) {
+              console.error(`Error getting repository details: ${error}`);
+            }
+            break;
+          }
+          case "CloseBounty": {
+            try {
+              const { repoOwnerName, repositoryName } = await getRepoDetails(
+                eventAttributes["RepositoryId"]
+              );
+              const username = await getUsername(eventAttributes["Creator"]);
+
+              blocks.push(
+                generateSectionBlock(
+                  `<https://gitopia.com/${username}|${username}> closed a bounty in <https://gitopia.com/${repoOwnerName}/${repositoryName}/issues/${eventAttributes["BountyParentIid"]}|#${eventAttributes["BountyParentIid"]}>\n<https://gitopia.com/${repoOwnerName}/${repositoryName}/issues/${eventAttributes["BountyParentIid"]}/bounties|${repoOwnerName}/${repositoryName} #${eventAttributes["BountyParentIid"]}/bounties>`
+                )
+              );
+            } catch (error) {
+              console.error(`Error getting repository details: ${error}`);
+            }
             break;
           }
           default:
             console.log(`Unsupported action ${eventAttributes["action"]}`);
-            break;
         }
 
-        // If the key and value match our criteria, set the flag to true
-        if (
-          eventAttributes["RepositoryOwnerId"] ===
-          "gitopia1tkvqw2mwjsjptlm08jdp04mw2834qzd7v5x9nm5us8dp04hsp4rq3c8dm9"
-        ) {
-          channel = "#engineering";
+        const keysToCheck = ["RepositoryOwnerId", "RepositoryOwnerType"];
+        const keysExist = keysToCheck.every((key) =>
+          eventAttributes.hasOwnProperty(key)
+        );
+
+        let repoOwnerName = "";
+        if (keysExist) {
+          repoOwnerName = await resolveAddress(
+            eventAttributes["RepositoryOwnerId"],
+            eventAttributes["RepositoryOwnerType"]
+          );
         }
 
-        // Send the message to Slack
-        if (blocks.length > 0) {
-          try {
-            await web.chat.postMessage({
-              channel,
-              blocks: blocks,
-            });
-          } catch (e) {
-            console.error("Error sending message to Slack:", e);
-          }
-        }
+        postToSlack(web, subscriptions, repoOwnerName, blocks);
       }
     }
   });
@@ -392,4 +687,70 @@ function connect() {
   });
 }
 
+let subscriptions = {};
+
 connect();
+
+const app = express();
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+
+const server = app.listen(3000, () => {
+  console.log(
+    "Express server listening on port %d in %s mode",
+    server.address().port,
+    app.settings.env
+  );
+});
+
+app.post("/", (req, res) => {
+  let message = "";
+  const text = req.body.text;
+  const args = text.split(" ");
+
+  if (args.length !== 2) {
+    message = "Invalid command";
+  }
+
+  const channel = req.body.channel_name;
+
+  if (!subscriptions[channel]) {
+    subscriptions[channel] = [];
+  }
+
+  switch (args[0]) {
+    case "subscribe": {
+      if (args[1] === "list") {
+        message = `Active subscriptions: ${subscriptions[channel]}`;
+      } else {
+        const index = subscriptions[channel].indexOf(args[1]);
+        if (index !== -1) {
+          message = `Already subscribed to ${args[1]}`;
+        } else {
+          subscriptions[channel].push(args[1]);
+          message = `Subscribed to ${args[1]}`;
+        }
+      }
+      break;
+    }
+    case "unsubscribe": {
+      const index = subscriptions[channel].indexOf(args[1]);
+      if (index !== -1) {
+        subscriptions[channel].splice(index, 1);
+        message = `Unsubscribed to ${args[1]}`;
+      } else {
+        message = `Not subscribing to ${args[1]} already`;
+      }
+      break;
+    }
+    default:
+      message = "Invalid command";
+  }
+
+  let data = {
+    response_type: "ephemeral",
+    text: message,
+  };
+
+  res.json(data);
+});
