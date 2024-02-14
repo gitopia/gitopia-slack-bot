@@ -1,6 +1,16 @@
 const axios = require("axios");
 const { GITOPIA_API_URL } = require("./config");
 
+async function getUser(address) {
+  const response = await axios.get(`${GITOPIA_API_URL}/user/${address}`);
+
+  if (response.data) {
+    return response.data.User;
+  }
+
+  return null;
+}
+
 async function getUsername(address) {
   const response = await axios.get(`${GITOPIA_API_URL}/user/${address}`);
 
@@ -84,6 +94,7 @@ const postToSlack = async (web, subscriptions, repoOwnerName, blocks) => {
 };
 
 module.exports = {
+  getUser,
   getUsername,
   getDAOname,
   resolveAddress,

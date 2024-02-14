@@ -6,6 +6,7 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const { WS_ADDR } = require("./config");
 const {
+  getUser,
   getUsername,
   resolveAddress,
   getRepoDetails,
@@ -533,11 +534,29 @@ function connect() {
             }
             break;
           }
-          case "/gitopia.gitopia.gitopia.MsgCreateComment": {
-            blocks.push(
-              generateSectionBlock("New comment somewhere :man-shrugging:")
-            );
+          case "CreateComment": {
+            try {
+              const { repoOwnerName, repositoryName } = await getRepoDetails(
+                eventAttributes["RepositoryId"]
+              );
+              const username = await getUsername(eventAttributes["Creator"]);
 
+              let section = generateSectionBlock(
+                `<https://gitopia.com/${username}|${username}> commented: "${eventAttributes["CommentBody"]}" on <https://gitopia.com/${repoOwnerName}/${repositoryName}/issues/${eventAttributes["CommentParentIid"]}|${repoOwnerName}/${repositoryName} #${eventAttributes["CommentParentIid"]}>`
+              );
+
+              const user = await getUser(eventAttributes["Creator"]);
+              if (user.avatarUrl) {
+                section.accessory = {
+                  type: "image",
+                  image_url: user.avatarUrl,
+                  alt_text: "user avatar",
+                };
+              }
+              blocks.push(section);
+            } catch (error) {
+              console.error(`Error getting repository details: ${error}`);
+            }
             break;
           }
           case "ForkRepository": {
