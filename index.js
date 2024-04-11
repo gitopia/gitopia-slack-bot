@@ -675,7 +675,7 @@ function connect() {
             break;
           }
           default:
-            console.log(`Unsupported action ${eventAttributes["action"]}`);
+          // console.log(`Unsupported action ${eventAttributes["action"]}`);
         }
 
         const keysToCheck = ["RepositoryOwnerId", "RepositoryOwnerType"];
