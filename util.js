@@ -1,8 +1,9 @@
 const axios = require("axios");
-const { GITOPIA_API_URL } = require("./config");
 
 async function getUser(address) {
-  const response = await axios.get(`${GITOPIA_API_URL}/user/${address}`);
+  const response = await axios.get(
+    `${process.env.GITOPIA_API_URL}/user/${address}`
+  );
 
   if (response.data) {
     return response.data.User;
@@ -12,7 +13,9 @@ async function getUser(address) {
 }
 
 async function getUsername(address) {
-  const response = await axios.get(`${GITOPIA_API_URL}/user/${address}`);
+  const response = await axios.get(
+    `${process.env.GITOPIA_API_URL}/user/${address}`
+  );
 
   // Ensure the response data contains a username
   if (response.data && response.data.User.username) {
@@ -25,7 +28,9 @@ async function getUsername(address) {
 }
 
 async function getDAOname(address) {
-  const response = await axios.get(`${GITOPIA_API_URL}/dao/${address}`);
+  const response = await axios.get(
+    `${process.env.GITOPIA_API_URL}/dao/${address}`
+  );
 
   // Ensure the response data contains a name
   if (response.data && response.data.dao.name) {
@@ -45,7 +50,7 @@ const resolveAddress = async (address, type) => {
 
 const getRepoDetails = async (repositoryId) => {
   const response = await axios.get(
-    `${GITOPIA_API_URL}/repository/${repositoryId}`
+    `${process.env.GITOPIA_API_URL}/repository/${repositoryId}`
   );
 
   const repositoryOwnerId = response.data.Repository.owner.id;
