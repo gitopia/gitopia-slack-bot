@@ -62,8 +62,8 @@ function connect() {
         // Iterate over the attributes of the event
         for (let attribute of event.attributes) {
           // Decode the attribute key and value
-          let key = Buffer.from(attribute.key, "base64").toString();
-          let value = Buffer.from(attribute.value, "base64").toString();
+          let key = Buffer.from(attribute.key).toString();
+          let value = Buffer.from(attribute.value).toString();
 
           eventAttributes[key] = value;
         }
@@ -717,7 +717,7 @@ const app = express();
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-const server = app.listen(3000, () => {
+const server = app.listen(3001, () => {
   console.log(
     "Express server listening on port %d in %s mode",
     server.address().port,
